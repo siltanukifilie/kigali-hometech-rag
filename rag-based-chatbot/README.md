@@ -1,16 +1,17 @@
-# RAG-based chatbot
+# RAG backend
 
-This folder will contain the Python backend.
+The backend extracts and chunks the files in `data/`, creates Gemini embeddings, stores them in ChromaDB, retrieves evidence, and asks Gemini Flash Lite to answer with citations.
 
-The `data/` directory contains the fictional business documents used to build and test the vector database.
+For the full installation, architecture, commands, and troubleshooting guide, read the [project README](../README.md).
 
-Planned components:
+Quick start from this folder:
 
-- PDF and text document loading
-- Text chunking and metadata
-- Embeddings
-- ChromaDB storage and retrieval
-- LLM API integration
-- Source citations
-- A small API for the frontend
-
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Add GEMINI_API_KEY to .env
+python ingest.py
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
