@@ -8,6 +8,11 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 5174"
   },
+  "dependencies": {
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
   "devDependencies": {
     "vite": "^7.0.0"
   }

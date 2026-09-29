@@ -32,7 +32,7 @@ Customer question → Query embedding → Relevant chunks
 | Embedding dimensions | 768 | Good balance of quality, speed, and storage |
 | Vector database | ChromaDB | Easy local persistent database for a learning project |
 | LLM | `gemini-3.5-flash-lite` | Fast and suitable for a small demonstration |
-| Frontend | Vanilla JavaScript + Vite | Lightweight interface with very little code |
+| Frontend | React + Vite | Responsive, component-based chat and evidence interface |
 
 This project originally planned to use `gemini-2.5-flash-lite`. During the live test, the Gemini API reported that this model is unavailable to new accounts and directed new projects to `gemini-3.5-flash-lite`. The project therefore uses the current stable Flash-Lite model.
 

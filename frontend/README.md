@@ -1,6 +1,6 @@
 # Chat frontend
 
-A small Vite-powered HTML, CSS, and JavaScript interface for the Kigali HomeTech RAG API.
+A responsive React and Vite interface for the Kigali HomeTech RAG API. It includes a document library, system status, guided questions, source evidence, confidence indicators, and a mobile layout.
 
 For the full installation and demonstration guide, read the [project README](../README.md).
 

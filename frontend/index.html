@@ -3,62 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Kigali HomeTech document support chatbot" />
-    <title>Kigali HomeTech Support</title>
+    <meta name="theme-color" content="#0b2540" />
+    <meta name="description" content="Kigali HomeTech document-grounded customer support" />
+    <title>Kigali HomeTech · Knowledge Assistant</title>
   </head>
   <body>
-    <main class="page-shell">
-      <header class="topbar">
-        <div class="brand-mark" aria-hidden="true">KH</div>
-        <div>
-          <p class="eyebrow">Kigali HomeTech Store</p>
-          <h1>Document Support Assistant</h1>
-        </div>
-        <span id="status" class="status">Checking API…</span>
-      </header>
-
-      <section class="hero">
-        <div>
-          <p class="eyebrow">RAG demonstration</p>
-          <h2>Ask a question. Get an answer grounded in approved documents.</h2>
-          <p>Try returns, warranties, delivery, payments, or product instructions.</p>
-        </div>
-        <button id="ingest-button" class="secondary-button" type="button">
-          Index documents
-        </button>
-      </section>
-
-      <section class="suggestions" aria-label="Example questions">
-        <button type="button">Can I return a blender after 14 days?</button>
-        <button type="button">How long does delivery take in Kigali?</button>
-        <button type="button">How do I claim a warranty?</button>
-      </section>
-
-      <section id="conversation" class="conversation" aria-live="polite">
-        <article class="message assistant">
-          <div class="avatar">AI</div>
-          <div class="bubble">
-            Hello! I answer from Kigali HomeTech’s approved documents and show my sources.
-          </div>
-        </article>
-      </section>
-
-      <form id="chat-form" class="composer">
-        <label class="sr-only" for="question">Your question</label>
-        <input
-          id="question"
-          name="question"
-          type="text"
-          autocomplete="off"
-          placeholder="Ask about returns, delivery, warranty…"
-          required
-          minlength="2"
-          maxlength="1000"
-        />
-        <button type="submit">Send</button>
-      </form>
-      <p class="privacy-note">Answers may be wrong. Check the cited company document.</p>
-    </main>
-    <script type="module" src="/src/main.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
