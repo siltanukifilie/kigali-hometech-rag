@@ -93,6 +93,13 @@ Approved document excerpts:
         verified_citation,
         answer,
     )
+    display_answer = re.sub(
+        r"\s*\[[^\[\]]+?, page \d+(?:;\s*[^\[\]]+?, page \d+)*\]",
+        "",
+        answer,
+    )
+    display_answer = re.sub(r" +([.,;:!?])", r"\1", display_answer)
+    display_answer = re.sub(r"[ \t]{2,}", " ", display_answer).strip()
 
     retrieved_evidence = []
     for index, match in enumerate(matches, start=1):
@@ -143,12 +150,12 @@ Approved document excerpts:
             "model": settings.llm_model,
             "temperature": 0.1,
             "citations_verified": len(verified_references),
-            "answer": answer,
+            "answer": display_answer,
         },
     }
 
     return {
-        "answer": answer,
+        "answer": display_answer,
         "sources": sources,
         "trace": trace,
     }

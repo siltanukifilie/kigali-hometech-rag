@@ -210,8 +210,8 @@ For the question **“Can I return a blender after 14 days?”**:
 4. ChromaDB returns candidate chunks; the backend removes duplicate pages and keeps the four best unique pages.
 5. The backend creates a prompt containing numbered evidence blocks with filenames and pages.
 6. The prompt tells Gemini to use only the excerpts and say it does not know when evidence is missing.
-7. Gemini cites evidence numbers, and the backend replaces them with verified document/page labels.
-8. The API separately returns the retrieved source metadata for the frontend source badges.
+7. Gemini cites evidence numbers so the backend can verify that each citation refers to retrieved evidence.
+8. The answer is shown without inline citations; the API returns verified source metadata for the source badges underneath it.
 
 ### Inspect the real RAG process
 
