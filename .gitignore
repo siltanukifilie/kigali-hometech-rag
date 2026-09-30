@@ -1,11 +1,46 @@
+# Environment files (keep only safe templates)
 .env
+.env.*
+*.env
+*.env.*
+!.env.example
+!**/.env.example
+!*.env.example
 .venv/
+
+# Credentials, API keys, service accounts, and certificates
+credentials/
+**/credentials/
+secrets/
+**/secrets/
+credentials.json
+**/credentials.json
+client_secret*.json
+**/client_secret*.json
+service-account*.json
+**/service-account*.json
+service_account*.json
+**/service_account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Local cloud and authentication configuration
+.aws/
+.gcp/
+.config/gcloud/
+
+# Python
 __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
 chroma_db/
 .DS_Store
+
+# Frontend build and dependencies
 node_modules/
 dist/
 .vite/
