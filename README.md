@@ -213,6 +213,19 @@ For the question **“Can I return a blender after 14 days?”**:
 7. Gemini cites evidence numbers, and the backend replaces them with verified document/page labels.
 8. The API separately returns the retrieved source metadata for the frontend source badges.
 
+### Inspect the real RAG process
+
+After the chatbot answers, use the **Transparency** panel on the right. Click any step to inspect the real data produced for that specific question:
+
+- **Question received** — the exact question and character count.
+- **Query embedded** — the Gemini embedding model, 768 dimensions, and a safe preview of the first eight vector values.
+- **Vector search** — the ChromaDB collection, similarity method, indexed-chunk count, and returned-candidate count.
+- **Evidence retrieved** — the selected document pages, similarity scores, and text excerpts sent as evidence.
+- **Prompt augmented** — the grounding instruction and a safe preview showing how the question and evidence were combined.
+- **Answer verified** — the generation model, temperature, final answer, and number of verified citations.
+
+The API returns this information in a `trace` object with each `/chat` response. It does not expose the Gemini API key or the complete private prompt.
+
 ## Test questions
 
 - Can I return a blender after 14 days?

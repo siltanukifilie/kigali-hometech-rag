@@ -18,6 +18,10 @@ def collection():
     )
 
 
+def indexed_chunk_count() -> int:
+    return collection().count()
+
+
 def replace_all(chunks: list[Chunk], embeddings: list[list[float]]) -> int:
     if len(chunks) != len(embeddings):
         raise ValueError("Every chunk must have exactly one embedding.")

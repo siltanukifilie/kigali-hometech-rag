@@ -63,7 +63,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(17,105,168,.
 .process-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .process-heading small { padding: 3px 6px; color: #6c8493; background: rgba(255,255,255,.75); border-radius: 99px; font-size: 7px; font-weight: 700; }
 .process.complete .process-heading small { color: #18744e; background: #dcf3e6; }
-.process-step { position: relative; display: grid; grid-template-columns: 25px 1fr; align-items: start; gap: 8px; min-height: 57px; }
+.process-step { position: relative; display: grid; grid-template-columns: 25px 1fr; align-items: start; gap: 8px; width: 100%; min-height: 57px; padding: 3px; border: 0; border-radius: 9px; text-align: left; color: inherit; background: transparent; transition: .18s ease; }
+.process-step:hover { background: rgba(255,255,255,.68); }
+.process-step.active { background: #fff; box-shadow: 0 3px 12px rgba(28,76,101,.08); }
 .step-marker { z-index: 1; display: grid; place-items: center; width: 25px; height: 25px; color: #1c7ead; background: #fff; border: 1px solid #cce0e9; border-radius: 8px; font-size: 8px; font-weight: 800; }
 .process.complete .step-marker { color: #fff; background: #29a06c; border-color: #29a06c; }
 .step-copy { padding-top: 1px; }
@@ -71,6 +73,27 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(17,105,168,.
 .step-copy p { margin: 2px 0 0; color: #788d9a; font-size: 7.5px; font-weight: 500; line-height: 1.45; }
 .process-step > i { position: absolute; top: 27px; left: 12px; width: 1px; height: 27px; background: #c9dce4; }
 .process.complete .process-step > i { background: #9bd8bb; }
+.trace-empty, .trace-detail { margin-top: 10px; padding: 11px; border: 1px solid #d6e5ea; border-radius: 10px; background: rgba(255,255,255,.82); }
+.trace-empty { color: #718793; font-size: 8px; line-height: 1.5; }
+.trace-detail { animation: rise .2s ease both; }
+.trace-label { display: block; margin-bottom: 6px; color: #7890a1; font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.trace-detail blockquote { margin: 0 0 6px; padding: 9px; border-left: 3px solid #279c6c; border-radius: 0 7px 7px 0; color: #345165; background: #eef8f3; font-size: 9px; line-height: 1.5; }
+.trace-detail > small { color: #8295a1; font-size: 7px; }
+.trace-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.trace-facts p { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; padding: 7px; border-radius: 7px; background: #f1f7f9; }
+.trace-facts span { color: #8194a0; font-size: 7px; }
+.trace-facts strong { overflow: hidden; color: #38586b; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.vector-preview { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; margin-bottom: 6px; }
+.vector-preview code, .code-line { padding: 5px; border: 1px solid #dce8ed; border-radius: 5px; color: #256d92; background: #f7fafb; font: 7px ui-monospace,SFMono-Regular,Consolas,monospace; }
+.code-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-evidence { display: flex; flex-direction: column; gap: 6px; }
+.trace-evidence article { padding: 8px; border: 1px solid #dce8ed; border-radius: 8px; background: #f9fbfc; }
+.trace-evidence article strong { color: #3f6073; font-size: 8px; }
+.trace-evidence article small { float: right; color: #20845b; font-size: 7px; font-weight: 700; }
+.trace-evidence article p { display: -webkit-box; overflow: hidden; margin: 5px 0 0; color: #748995; font-size: 7px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.instruction-box, .answer-preview { margin: 0 0 9px; padding: 8px; border-radius: 7px; color: #426174; background: #eef7f3; font-size: 8px; line-height: 1.5; }
+.trace-detail pre { overflow-x: auto; margin: 0; padding: 8px; border: 1px solid #dce8ed; border-radius: 7px; color: #536f80; background: #f8fafb; font: 7px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; white-space: pre-wrap; }
+.answer-preview { max-height: 125px; overflow-y: auto; margin-bottom: 0; background: #f1f7fa; }
 .overlay { display: none; }.spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } } @keyframes typing { 0%,60%,100% { transform: translateY(0); opacity:.45 } 30% { transform: translateY(-4px); opacity:1 } } @keyframes rise { from { opacity:0; transform:translateY(7px) } to { opacity:1; transform:none } }
 

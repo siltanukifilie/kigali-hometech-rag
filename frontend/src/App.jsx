@@ -100,8 +100,20 @@ function Message({ message }) {
   </article>;
 }
 
-function Evidence({ sources }) {
-  const complete = sources.length > 0;
+function TraceDetail({ step, trace }) {
+  if (!trace) return <div className="trace-empty">Ask a question first. Then select any step to inspect the real data used for that answer.</div>;
+  if (step === 0) return <div className="trace-detail"><span className="trace-label">Actual customer query</span><blockquote>{trace.question.text}</blockquote><small>{trace.question.characters} characters sent to FastAPI</small></div>;
+  if (step === 1) return <div className="trace-detail"><div className="trace-facts"><p><span>Model</span><strong>{trace.embedding.model}</strong></p><p><span>Dimensions</span><strong>{trace.embedding.dimensions}</strong></p></div><span className="trace-label">First 8 vector values</span><div className="vector-preview">{trace.embedding.preview.map((value, i) => <code key={i}>{value}</code>)}</div><small>The full vector contains {trace.embedding.dimensions} numbers.</small></div>;
+  if (step === 2) return <div className="trace-detail"><div className="trace-facts"><p><span>Database</span><strong>{trace.search.database}</strong></p><p><span>Metric</span><strong>{trace.search.metric}</strong></p><p><span>Chunks searched</span><strong>{trace.search.indexed_chunks}</strong></p><p><span>Candidates</span><strong>{trace.search.candidates_returned}</strong></p></div><span className="trace-label">Collection</span><code className="code-line">{trace.search.collection}</code></div>;
+  if (step === 3) return <div className="trace-detail"><span className="trace-label">Actual evidence selected</span><div className="trace-evidence">{trace.retrieval.evidence.map((item) => <article key={item.reference}><strong>{item.document} · page {item.page}</strong><small>{Math.round(item.similarity * 100)}% similarity</small><p>{item.snippet}</p></article>)}</div></div>;
+  if (step === 4) return <div className="trace-detail"><div className="trace-facts"><p><span>Question added</span><strong>{trace.augmentation.question_added ? "Yes" : "No"}</strong></p><p><span>Evidence blocks</span><strong>{trace.augmentation.evidence_blocks_added}</strong></p></div><span className="trace-label">Controlled instruction</span><p className="instruction-box">{trace.augmentation.instruction}</p><span className="trace-label">Prompt preview</span><pre>{trace.augmentation.prompt_preview}</pre></div>;
+  return <div className="trace-detail"><div className="trace-facts"><p><span>Generation model</span><strong>{trace.generation.model}</strong></p><p><span>Temperature</span><strong>{trace.generation.temperature}</strong></p><p><span>Citations checked</span><strong>{trace.generation.citations_verified}</strong></p></div><span className="trace-label">Verified response</span><p className="answer-preview">{trace.generation.answer}</p></div>;
+}
+
+function Evidence({ sources, trace }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const complete = Boolean(trace);
+  useEffect(() => { setActiveStep(0); }, [trace?.question?.text]);
   return <aside className="evidence">
     <div className="evidence-title"><div><span>Transparency</span><h2>Answer evidence</h2></div><ShieldCheck size={19}/></div>
     {sources.length ? <div className="evidence-list">{sources.map((source, i) => <article key={`${source.path}-${source.page}-${i}`}>
@@ -109,11 +121,12 @@ function Evidence({ sources }) {
     </article>)}</div> : <div className="evidence-empty"><div><FileQuestion size={25}/></div><strong>Sources will appear here</strong><p>Ask a question to see which approved pages support the answer.</p></div>}
     <section className={`process ${complete ? "complete" : ""}`}>
       <div className="process-heading"><span>Query to response</span><small>{complete ? "Completed" : "Process preview"}</small></div>
-      {ragSteps.map(([title, detail], i) => <div className="process-step" key={title}>
+      {ragSteps.map(([title, detail], i) => <button type="button" className={`process-step ${activeStep === i ? "active" : ""}`} key={title} onClick={() => setActiveStep(i)} aria-expanded={activeStep === i}>
         <div className="step-marker">{complete ? <Check size={11}/> : i + 1}</div>
         <div className="step-copy"><strong>{title}</strong><p>{detail}</p></div>
         {i < ragSteps.length - 1 && <i/>}
-      </div>)}
+      </button>)}
+      <TraceDetail step={activeStep} trace={trace}/>
     </section>
   </aside>;
 }
@@ -127,7 +140,9 @@ export default function App() {
   const [menu, setMenu] = useState(false);
   const end = useRef(null);
   const input = useRef(null);
-  const latestSources = [...messages].reverse().find((item) => item.sources?.length)?.sources || [];
+  const latestAnswer = [...messages].reverse().find((item) => item.trace);
+  const latestSources = latestAnswer?.sources || [];
+  const latestTrace = latestAnswer?.trace || null;
 
   useEffect(() => { checkHealth(); }, []);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -151,7 +166,7 @@ export default function App() {
     setQuestion(""); setAsking(true);
     try {
       const result = await request("/chat", { method: "POST", body: JSON.stringify({ question: value }) });
-      setMessages((items) => items.map((item) => item.id === pendingId ? { ...item, pending: false, text: result.answer, sources: result.sources || [] } : item));
+      setMessages((items) => items.map((item) => item.id === pendingId ? { ...item, pending: false, text: result.answer, sources: result.sources || [], trace: result.trace } : item));
     } catch (error) {
       setMessages((items) => items.map((item) => item.id === pendingId ? { ...item, pending: false, text: `I could not answer that question. ${error.message}`, sources: [] } : item));
     } finally { setAsking(false); requestAnimationFrame(() => input.current?.focus()); }
@@ -164,7 +179,7 @@ export default function App() {
       <header className="topbar"><button className="icon-button menu" onClick={() => setMenu(true)}><Menu size={19}/></button><div className="top-title"><span>Customer support</span><strong>Ask the business documents</strong></div><Status health={health}/><div className="model"><Sparkles size={13}/>Gemini 3.5 Flash-Lite</div></header>
       <div className="workspace"><section className="chat"><div className="conversation">{messages.length === 1 && <Welcome onSelect={selectSuggestion}/>}<div className="message-list">{messages.map((message) => <Message message={message} key={message.id}/>)}<div ref={end}/></div></div>
         <footer><form onSubmit={submit}><input ref={input} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about returns, delivery, warranty, or instructions…" disabled={asking} maxLength={1000}/><button disabled={asking || question.trim().length < 2}>{asking ? <LoaderCircle className="spin"/> : <ArrowUp/>}</button></form><p><ShieldCheck size={12}/>Grounded in approved documents · Verify important decisions</p></footer>
-      </section><Evidence sources={latestSources}/></div>
+      </section><Evidence sources={latestSources} trace={latestTrace}/></div>
     </main>
   </div>;
 }
