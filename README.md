@@ -12,7 +12,9 @@ A small, beginner-friendly Retrieval-Augmented Generation (RAG) project. The cha
 6. Retrieve the most relevant chunks and keep four unique source pages.
 7. Add those chunks to a controlled prompt.
 8. Ask Gemini Flash Lite to answer only from that evidence.
-9. Show the answer together with document and page sources.
+9. Show a clean answer with document and page sources underneath it.
+10. Let learners inspect the real query, embedding, search, evidence, prompt, and citation-verification data.
+11. Upload a new PDF from the sidebar and automatically rebuild the knowledge index.
 
 ```text
 Documents → Text → Chunks → Gemini Embeddings → ChromaDB
@@ -38,7 +40,7 @@ This project originally planned to use `gemini-2.5-flash-lite`. During the live 
 
 ## Verified development result
 
-The complete flow was tested on September 29, 2026:
+The clean repository baseline and the latest interface were tested on September 30, 2026:
 
 - All five PDFs were confirmed to contain five pages each.
 - The five PDFs and one FAQ file produced 27 chunks across 26 source pages.
@@ -49,6 +51,11 @@ The complete flow was tested on September 29, 2026:
 - The FastAPI health endpoint returned HTTP 200 with 27 indexed chunks.
 - The browser CORS check passed for the frontend on port `5174`.
 - The Vite frontend production build completed successfully.
+- The answer area scrolls independently while the question box stays visible.
+- Every transparency step displayed real data from the latest question.
+- The PDF upload endpoint accepted a valid readable PDF in an isolated test and rejected an invalid file renamed as `.pdf`.
+
+The counts above describe the documents committed in a fresh clone. Locally uploaded PDFs increase the document, page, and chunk counts after the index is rebuilt.
 
 ## Folder structure
 
@@ -72,6 +79,7 @@ kigali-hometech-rag/
 │   ├── .env.example
 │   ├── index.html
 │   └── package.json
+├── TEST_QUESTIONS.md       # Categorized manual testing checklist
 ├── .gitignore
 └── README.md
 ```
@@ -170,7 +178,7 @@ The backend endpoints are:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/health` | Check the API and indexed chunk count |
+| GET | `/health` | Check the API plus indexed document and chunk counts |
 | POST | `/ingest` | Rebuild the document index |
 | POST | `/documents/upload` | Upload one PDF and automatically rebuild the index |
 | POST | `/chat` | Ask a question and receive an answer with sources |
@@ -181,6 +189,13 @@ Example API question:
 curl -X POST http://127.0.0.1:8000/chat \
   -H "Content-Type: application/json" \
   -d '{"question":"Can I return a blender after 14 days?"}'
+```
+
+Example PDF upload:
+
+```bash
+curl -X POST http://127.0.0.1:8000/documents/upload \
+  -F "file=@/path/to/New_Business_Guide.pdf"
 ```
 
 ## 6. Start the frontend
@@ -211,6 +226,8 @@ Port `5173` was already occupied on the development computer, so this project us
 6. Ask questions whose answers are in the new document and confirm that its name and page appear below the answer.
 
 For safety, the upload rejects non-PDF files, empty or unreadable PDFs, scanned PDFs without extractable text, files larger than 10 MB, and duplicate filenames. Uploaded PDFs are saved in `rag-based-chatbot/data/`. The new file remains local until you deliberately commit and push it to GitHub.
+
+The upload uses `python-multipart`, which is installed automatically by `pip install -r requirements.txt`.
 
 ## How one question is answered
 
@@ -255,11 +272,12 @@ The final question is useful for checking that the chatbot says it does not know
 
 ## Updating documents
 
-1. Put new `.pdf` or `.txt` files inside `rag-based-chatbot/data/`.
-2. Remove old or duplicate files.
-3. Activate the backend virtual environment.
-4. Run `python ingest.py` again.
-5. Test representative customer questions and verify the cited pages.
+Choose either method:
+
+- **From the interface:** select **Add a new PDF** in the left sidebar. The chatbot validates, saves, and indexes it automatically.
+- **Manually:** put new `.pdf` or `.txt` files inside `rag-based-chatbot/data/`, activate the backend virtual environment, and run `python ingest.py`.
+
+After either method, test representative customer questions, inspect the Transparency panel, and verify that the correct document and page badges appear below the answer. Avoid old or duplicate documents because ingestion rebuilds the collection from every supported file currently in `data/`.
 
 ## Security and quality notes
 
@@ -291,3 +309,11 @@ Confirm the frontend uses port `5174` and both `http://127.0.0.1:5174` and `http
 ### The embedding model changes
 
 Rebuild the Chroma collection by running `python ingest.py`. Embeddings from different models or dimensions must not be mixed.
+
+### PDF upload is unavailable
+
+Activate the backend virtual environment, run `pip install -r requirements.txt`, and restart FastAPI. The upload route requires `python-multipart`.
+
+### A PDF is rejected as unreadable
+
+The learning project accepts text-based PDFs up to 10 MB. If a PDF contains only scanned images, run OCR on it first and then upload the searchable version.
