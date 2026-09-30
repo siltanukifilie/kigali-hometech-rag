@@ -228,6 +228,8 @@ The API returns this information in a `trace` object with each `/chat` response.
 
 ## Test questions
 
+The complete categorized checklist is in [TEST_QUESTIONS.md](TEST_QUESTIONS.md). It includes return, warranty, delivery, payment, product-manual, and missing-information tests, plus a table for recording results.
+
 - Can I return a blender after 14 days?
 - What proof do I need for a return?
 - How long does delivery take in Kigali?
