@@ -19,6 +19,14 @@ const suggestions = [
   ["Warranty", "How do I claim a warranty?", ShieldCheck],
   ["Instructions", "How should I clean the SmartBlend 500?", Wrench],
 ];
+const ragSteps = [
+  ["Question received", "The customer’s message is sent securely to the FastAPI backend."],
+  ["Query embedded", "Gemini converts the question into a 768-dimensional meaning vector."],
+  ["ChromaDB searched", "The vector database compares the question with all document chunks."],
+  ["Evidence retrieved", "The four best unique pages are selected with their source metadata."],
+  ["Prompt augmented", "The question and retrieved evidence are combined into a controlled prompt."],
+  ["Answer verified", "Gemini writes from the evidence; document names and page citations are checked."],
+];
 const welcome = {
   id: "welcome", role: "assistant", sources: [],
   text: "Hello! I search Kigali HomeTech’s approved documents to answer questions about returns, warranties, delivery, payments, and product instructions.",
@@ -93,12 +101,20 @@ function Message({ message }) {
 }
 
 function Evidence({ sources }) {
+  const complete = sources.length > 0;
   return <aside className="evidence">
     <div className="evidence-title"><div><span>Transparency</span><h2>Answer evidence</h2></div><ShieldCheck size={19}/></div>
     {sources.length ? <div className="evidence-list">{sources.map((source, i) => <article key={`${source.path}-${source.page}-${i}`}>
       <b>{String(i + 1).padStart(2, "0")}</b><div><strong>{source.document}</strong><span><FileText size={12}/>Page {source.page}</span><div className="score"><i><u style={{width: `${Math.round(source.similarity * 100)}%`}}/></i><small>{Math.round(source.similarity * 100)}% match</small></div></div>
     </article>)}</div> : <div className="evidence-empty"><div><FileQuestion size={25}/></div><strong>Sources will appear here</strong><p>Ask a question to see which approved pages support the answer.</p></div>}
-    <section className="process"><span>How an answer is made</span>{["Question embedded", "Relevant chunks retrieved", "Gemini writes from evidence"].map((step, i) => <div key={step}><b>{i + 1}</b><p>{step}</p>{i < 2 && <i/>}</div>)}</section>
+    <section className={`process ${complete ? "complete" : ""}`}>
+      <div className="process-heading"><span>Query to response</span><small>{complete ? "Completed" : "Process preview"}</small></div>
+      {ragSteps.map(([title, detail], i) => <div className="process-step" key={title}>
+        <div className="step-marker">{complete ? <Check size={11}/> : i + 1}</div>
+        <div className="step-copy"><strong>{title}</strong><p>{detail}</p></div>
+        {i < ragSteps.length - 1 && <i/>}
+      </div>)}
+    </section>
   </aside>;
 }
 
