@@ -172,6 +172,7 @@ The backend endpoints are:
 | --- | --- | --- |
 | GET | `/health` | Check the API and indexed chunk count |
 | POST | `/ingest` | Rebuild the document index |
+| POST | `/documents/upload` | Upload one PDF and automatically rebuild the index |
 | POST | `/chat` | Ask a question and receive an answer with sources |
 
 Example API question:
@@ -199,6 +200,17 @@ Port `5173` was already occupied on the development computer, so this project us
 
 - Backend: `8000`
 - Frontend: `5174`
+
+## Add a new PDF from the chatbot
+
+1. Open the chatbot and find **Knowledge index** in the left sidebar.
+2. Select **Add a new PDF**.
+3. Choose a text-based PDF that is 10 MB or smaller.
+4. Wait while the backend saves the PDF, extracts its pages, chunks all approved documents, creates Gemini embeddings, and rebuilds ChromaDB.
+5. Read the success message in the chat and check the updated file and chunk counts.
+6. Ask questions whose answers are in the new document and confirm that its name and page appear below the answer.
+
+For safety, the upload rejects non-PDF files, empty or unreadable PDFs, scanned PDFs without extractable text, files larger than 10 MB, and duplicate filenames. Uploaded PDFs are saved in `rag-based-chatbot/data/`. The new file remains local until you deliberately commit and push it to GitHub.
 
 ## How one question is answered
 

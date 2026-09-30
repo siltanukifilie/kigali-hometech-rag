@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Bot, Check, ChevronRight, CircleAlert, Database, FileCheck2,
   FileQuestion, FileText, HelpCircle, LoaderCircle, Menu, PackageCheck,
-  RefreshCw, Search, ShieldCheck, Sparkles, Truck, UserRound, Wrench, X,
+  RefreshCw, Search, ShieldCheck, Sparkles, Truck, Upload, UserRound, Wrench, X,
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -33,8 +33,10 @@ const welcome = {
 };
 
 async function request(path, options = {}) {
+  const isForm = options.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" }, ...options,
+    ...options,
+    headers: { ...(isForm ? {} : { "Content-Type": "application/json" }), ...options.headers },
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.detail || "The request failed.");
@@ -54,10 +56,11 @@ function Status({ health }) {
   return <div className={`status ${health.state}`}><Icon size={14} className={health.state === "loading" ? "spin" : ""}/><span>{label}</span></div>;
 }
 
-function Sidebar({ health, indexing, onIndex, open, onClose }) {
+function Sidebar({ health, indexing, uploading, onIndex, onUpload, open, onClose }) {
+  const uploadInput = useRef(null);
   return <aside className={`sidebar ${open ? "open" : ""}`}>
     <div className="sidebar-top"><Brand/><button className="icon-button mobile-close" onClick={onClose}><X size={18}/></button></div>
-    <div className="library-title"><span>Approved library</span><em>6 files</em></div>
+    <div className="library-title"><span>Approved library</span><em>{health.documents || 6} files</em></div>
     <nav className="document-list">
       {documents.map(([name, meta, Icon, tone]) => <div className="document" key={name}>
         <div className={`doc-icon ${tone}`}><Icon size={17}/></div><div><strong>{name}</strong><span>{meta}</span></div><FileCheck2 size={15}/>
@@ -67,7 +70,11 @@ function Sidebar({ health, indexing, onIndex, open, onClose }) {
     <section className="index-card">
       <div className="index-head"><div><Database size={18}/></div><p><strong>Knowledge index</strong><span>Local ChromaDB</span></p></div>
       <div className="index-stats"><p><b>{health.chunks || "—"}</b><span>Chunks</span></p><p><b>768</b><span>Dimensions</span></p></div>
-      <button onClick={onIndex} disabled={indexing}><RefreshCw size={14} className={indexing ? "spin" : ""}/>{indexing ? "Rebuilding…" : "Rebuild document index"}</button>
+      <div className="index-actions">
+        <input ref={uploadInput} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onUpload(file); }}/>
+        <button className="upload-document" onClick={() => uploadInput.current?.click()} disabled={indexing || uploading}><Upload size={14} className={uploading ? "pulse" : ""}/>{uploading ? "Uploading & indexing…" : "Add a new PDF"}</button>
+        <button onClick={onIndex} disabled={indexing || uploading}><RefreshCw size={14} className={indexing ? "spin" : ""}/>{indexing ? "Rebuilding…" : "Rebuild document index"}</button>
+      </div>
     </section>
     <small className="secure-note"><ShieldCheck size={13}/> Approved documents only</small>
   </aside>;
@@ -134,9 +141,10 @@ function Evidence({ sources, trace }) {
 export default function App() {
   const [messages, setMessages] = useState([welcome]);
   const [question, setQuestion] = useState("");
-  const [health, setHealth] = useState({ state: "loading", chunks: 0 });
+  const [health, setHealth] = useState({ state: "loading", chunks: 0, documents: 0 });
   const [asking, setAsking] = useState(false);
   const [indexing, setIndexing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [menu, setMenu] = useState(false);
   const end = useRef(null);
   const input = useRef(null);
@@ -148,15 +156,25 @@ export default function App() {
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   async function checkHealth() {
-    try { const data = await request("/health"); setHealth({ state: data.indexed_chunks ? "online" : "empty", chunks: data.indexed_chunks }); }
-    catch { setHealth({ state: "offline", chunks: 0 }); }
+    try { const data = await request("/health"); setHealth({ state: data.indexed_chunks ? "online" : "empty", chunks: data.indexed_chunks, documents: data.indexed_documents }); }
+    catch { setHealth({ state: "offline", chunks: 0, documents: 0 }); }
   }
   function notice(text) { setMessages((items) => [...items, { id: crypto.randomUUID(), role: "assistant", text, sources: [] }]); }
   async function rebuild() {
     setIndexing(true); setMenu(false);
-    try { const result = await request("/ingest", { method: "POST" }); setHealth({ state: "online", chunks: result.chunks }); notice(`Knowledge index ready: ${result.documents} documents, ${result.pages} pages, and ${result.chunks} searchable chunks.`); }
+    try { const result = await request("/ingest", { method: "POST" }); setHealth({ state: "online", chunks: result.chunks, documents: result.documents }); notice(`Knowledge index ready: ${result.documents} documents, ${result.pages} pages, and ${result.chunks} searchable chunks.`); }
     catch (error) { notice(`I could not rebuild the index: ${error.message}`); checkHealth(); }
     finally { setIndexing(false); }
+  }
+  async function uploadPdf(file) {
+    setUploading(true); setMenu(false);
+    const form = new FormData(); form.append("file", file);
+    try {
+      const result = await request("/documents/upload", { method: "POST", body: form });
+      setHealth({ state: "online", chunks: result.chunks, documents: result.documents });
+      notice(`${result.filename} was added successfully. I extracted ${result.uploaded_pages} pages and rebuilt the index with ${result.chunks} searchable chunks.`);
+    } catch (error) { notice(`I could not add that PDF: ${error.message}`); checkHealth(); }
+    finally { setUploading(false); }
   }
   function selectSuggestion(value) { setQuestion(value); input.current?.focus(); }
   async function submit(event) {
@@ -173,7 +191,7 @@ export default function App() {
   }
 
   return <div className="app">
-    <Sidebar health={health} indexing={indexing} onIndex={rebuild} open={menu} onClose={() => setMenu(false)}/>
+    <Sidebar health={health} indexing={indexing} uploading={uploading} onIndex={rebuild} onUpload={uploadPdf} open={menu} onClose={() => setMenu(false)}/>
     {menu && <button className="overlay" onClick={() => setMenu(false)} aria-label="Close menu"/>}
     <main className="main">
       <header className="topbar"><button className="icon-button menu" onClick={() => setMenu(true)}><Menu size={19}/></button><div className="top-title"><span>Customer support</span><strong>Ask the business documents</strong></div><Status health={health}/><div className="model"><Sparkles size={13}/>Gemini 3.5 Flash-Lite</div></header>
