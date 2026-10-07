@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./rag-based-chatbot
+    env_file:
+      - ./rag-based-chatbot/.env
+    environment:
+      CHROMA_DB_PATH: /app/chroma_db
+      HOST: 0.0.0.0
+      PORT: 8000
+      CORS_ORIGINS: http://localhost:5174,http://127.0.0.1:5174
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./rag-based-chatbot/data:/app/data
+      - chroma_db:/app/chroma_db
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "5174:80"
+
+volumes:
+  chroma_db:

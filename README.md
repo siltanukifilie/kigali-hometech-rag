@@ -1,319 +1,215 @@
 # Kigali HomeTech RAG Chatbot
 
-A small, beginner-friendly Retrieval-Augmented Generation (RAG) project. The chatbot searches approved Kigali HomeTech Store documents before asking Gemini to answer, and it returns the document names and page numbers used as evidence.
+Kigali HomeTech RAG Chatbot is a customer-support demonstration project. It answers questions about returns, warranty, delivery, payments, and product use by searching approved company documents first. It does not answer from general knowledge alone: each answer is grounded in retrieved document pages and shown with its sources.
 
-## What this project demonstrates
+## Presentation summary
 
-1. Read PDF and text documents.
-2. Split long pages into overlapping chunks.
-3. Convert every chunk into a 768-number embedding with Gemini.
-4. Store the text, embeddings, and source metadata in ChromaDB.
-5. Convert a customer's question into an embedding.
-6. Retrieve the most relevant chunks and keep four unique source pages.
-7. Add those chunks to a controlled prompt.
-8. Ask Gemini Flash Lite to answer only from that evidence.
-9. Show a clean answer with document and page sources underneath it.
-10. Let learners inspect the real query, embedding, search, evidence, prompt, and citation-verification data.
-11. Upload a new PDF from the sidebar and automatically rebuild the knowledge index.
+**Problem:** Customers need quick, consistent answers, but policies and manuals are spread across several files.
+
+**Solution:** This project turns approved PDF and TXT documents into a searchable knowledge base. When a customer asks a question, the backend finds the most relevant document pages, gives them to Gemini as evidence, and returns a concise answer with source pages.
+
+**Key value:** The assistant can explain *where* an answer came from and says it does not know when the documents do not contain the answer.
 
 ```text
-Documents → Text → Chunks → Gemini Embeddings → ChromaDB
-                                                    ↓
-Customer question → Query embedding → Relevant chunks
-                                                    ↓
-                         Prompt + Gemini LLM → Answer + sources
+Approved documents
+      ↓
+Text extraction and chunking
+      ↓
+Gemini embeddings (768 numbers per chunk)
+      ↓
+ChromaDB vector database
+      ↓
+Customer question → relevant evidence → grounded Gemini answer + page sources
 ```
 
-## Technology choices
+## What the project demonstrates
 
-| Part | Choice | Why |
+- Retrieval-Augmented Generation (RAG) using real business documents.
+- Semantic search: it finds similar meanings, not only exact keywords.
+- Evidence-based answers with document names and page numbers.
+- A transparent view of the retrieval and answer process.
+- Safe PDF upload and automatic re-indexing.
+- A Docker setup that runs the backend and web interface together.
+
+## Technology used
+
+| Area | Technology | Role in the project |
 | --- | --- | --- |
-| Backend | Python + FastAPI | Small, readable API with automatic documentation |
-| PDF extraction | pypdf | Simple local PDF text extraction |
-| Embeddings | `gemini-embedding-2` | Converts meaning into vectors for semantic search |
-| Embedding dimensions | 768 | Good balance of quality, speed, and storage |
-| Vector database | ChromaDB | Easy local persistent database for a learning project |
-| LLM | `gemini-3.5-flash-lite` | Fast and suitable for a small demonstration |
-| Frontend | React + Vite | Responsive, component-based chat and evidence interface |
+| API backend | Python + FastAPI | Receives questions, indexes documents, and returns answers. |
+| PDF reading | pypdf | Extracts text while preserving page numbers. |
+| Embeddings | Gemini `gemini-embedding-2` | Changes text into numeric meaning vectors. |
+| Vector size | 768 dimensions | A practical balance of search quality, speed, and storage. |
+| Vector database | ChromaDB | Stores vectors and finds the closest document chunks. |
+| Answer model | Gemini `gemini-3.5-flash-lite` | Writes the final answer from the retrieved evidence. |
+| Web interface | React + Vite | Lets users ask questions, upload PDFs, and inspect sources. |
+| Containers | Docker Compose | Starts the backend and frontend with one command. |
 
-This project originally planned to use `gemini-2.5-flash-lite`. During the live test, the Gemini API reported that this model is unavailable to new accounts and directed new projects to `gemini-3.5-flash-lite`. The project therefore uses the current stable Flash-Lite model.
+## Backend process — step by step
 
-## Verified development result
+This is the most important part of the project to explain in a presentation.
 
-The clean repository baseline and the latest interface were tested on September 30, 2026:
+### A. Building the knowledge index
 
-- All five PDFs were confirmed to contain five pages each.
-- The five PDFs and one FAQ file produced 27 chunks across 26 source pages.
-- Gemini successfully generated 768-dimensional embeddings.
-- ChromaDB persisted and retrieved the 27 chunks.
-- A return-policy question produced a grounded answer with verified page citations.
-- An unsupported CEO-salary question returned: `I do not know from the available business documents.`
-- The FastAPI health endpoint returned HTTP 200 with 27 indexed chunks.
-- The browser CORS check passed for the frontend on port `5174`.
-- The Vite frontend production build completed successfully.
-- The answer area scrolls independently while the question box stays visible.
-- Every transparency step displayed real data from the latest question.
-- The PDF upload endpoint accepted a valid readable PDF in an isolated test and rejected an invalid file renamed as `.pdf`.
+The index is built when the user clicks **Rebuild document index**, uploads a new PDF, or runs the ingestion script.
 
-The counts above describe the documents committed in a fresh clone. Locally uploaded PDFs increase the document, page, and chunk counts after the index is rebuilt.
+1. **Read approved documents** — The backend reads every `.pdf` and `.txt` file in `rag-based-chatbot/data/`.
+2. **Extract text by page** — PDF text is extracted page by page, so the final answer can name the correct page.
+3. **Split text into chunks** — Long pages are divided into small, overlapping pieces. The default chunk size is 350 units with an overlap of 60, helping the system preserve meaning at chunk boundaries.
+4. **Create embeddings** — Gemini converts each chunk into a vector of 768 numbers. These numbers represent the meaning of the text.
+5. **Store in ChromaDB** — ChromaDB saves the vector, original chunk text, document name, file path, page number, and chunk number.
 
-## Folder structure
+```text
+PDF / TXT file → page text → overlapping chunks → 768-number embeddings → ChromaDB
+```
+
+### B. Answering a customer question
+
+For example, a customer asks: **“Can I return a blender after 14 days?”**
+
+1. **Receive and validate the question** — FastAPI accepts a question between 2 and 1,000 characters.
+2. **Embed the question** — Gemini changes the question into another 768-number vector.
+3. **Search by meaning** — ChromaDB compares the question vector with stored document vectors using cosine similarity.
+4. **Select evidence** — The backend retrieves candidates, removes duplicate document pages, and keeps the best four unique pages.
+5. **Build a controlled prompt** — The question and numbered evidence excerpts are sent to Gemini with rules: use only the evidence, do not invent information, and say “I do not know from the available business documents” if evidence is missing.
+6. **Generate and check the answer** — Gemini answers with evidence references. The backend verifies that each reference is one of the retrieved sources.
+7. **Return answer and trace** — The API sends the clean answer, source metadata, and a safe trace for the Transparency panel.
+
+```text
+Customer question → question embedding → ChromaDB search
+                  → best document pages → controlled Gemini prompt
+                  → verified answer + page sources
+```
+
+### Why 768 dimensions?
+
+An embedding is a list of numbers representing meaning. `768` means every chunk and question becomes a list of 768 numbers. It provides good semantic-search quality without making this small learning project unnecessarily slow or large. All vectors in one ChromaDB collection must use the same size, so changing `EMBEDDING_DIMENSIONS` requires rebuilding the index.
+
+## Frontend overview
+
+The frontend is intentionally simple. It provides:
+
+- A chat box for customer questions.
+- Suggested example questions.
+- Source badges showing the supporting document and page.
+- A **Transparency** panel that shows the question, embedding preview, search details, selected evidence, prompt summary, and answer verification.
+- Buttons to rebuild the knowledge index or upload a text-readable PDF.
+
+The backend remains responsible for document processing, retrieval, validation, and Gemini calls. The frontend only presents the results clearly.
+
+## Project structure
 
 ```text
 kigali-hometech-rag/
+├── docker-compose.yml               # Starts backend and frontend together
 ├── rag-based-chatbot/
+│   ├── Dockerfile                   # Backend container instructions
 │   ├── app/
-│   │   ├── config.py       # Reads environment settings
-│   │   ├── documents.py    # Extracts and chunks document text
-│   │   ├── embeddings.py   # Calls the Gemini Embedding API
-│   │   ├── indexer.py      # Coordinates document indexing
-│   │   ├── store.py        # Saves and searches ChromaDB
-│   │   ├── rag.py          # Builds the prompt and calls the LLM
-│   │   └── main.py         # FastAPI endpoints
-│   ├── data/               # Approved sample business documents
-│   ├── .env.example
-│   ├── ingest.py
+│   │   ├── config.py                # Environment settings
+│   │   ├── documents.py             # Read files and split text into chunks
+│   │   ├── embeddings.py            # Gemini embedding calls
+│   │   ├── indexer.py               # Builds the knowledge index
+│   │   ├── store.py                 # ChromaDB storage and search
+│   │   ├── rag.py                   # Retrieval, prompting, and citation checks
+│   │   └── main.py                  # FastAPI routes
+│   ├── data/                        # Approved PDFs and TXT documents
+│   ├── ingest.py                    # Command-line indexing entry point
 │   └── requirements.txt
 ├── frontend/
-│   ├── src/
-│   ├── .env.example
-│   ├── index.html
-│   └── package.json
-├── TEST_QUESTIONS.md       # Categorized manual testing checklist
-├── .gitignore
+│   ├── Dockerfile                   # Frontend container instructions
+│   └── src/                         # React interface
+├── TEST_QUESTIONS.md                # Manual test checklist
 └── README.md
 ```
 
-## 1. Get the project
+## Run the project with Docker
+
+### 1. Create your private environment file
 
 ```bash
-git clone https://github.com/siltanukifilie/kigali-hometech-rag.git
-cd kigali-hometech-rag
+cp rag-based-chatbot/.env.example rag-based-chatbot/.env
 ```
 
-If it is already cloned:
-
-```bash
-cd ~/kigali-hometech-rag
-git pull
-```
-
-## 2. Configure the backend
-
-```bash
-cd rag-based-chatbot
-cp .env.example .env
-```
-
-Open `.env` and add the API key created in Google AI Studio:
+Open `rag-based-chatbot/.env` and add your Gemini API key:
 
 ```env
-GEMINI_API_KEY=your_private_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-The complete backend configuration is:
+Keep this file private. It is ignored by Git and must not be shared or uploaded.
 
-```env
-GEMINI_API_KEY=
-LLM_MODEL=gemini-3.5-flash-lite
-EMBEDDING_MODEL=gemini-embedding-2
-EMBEDDING_DIMENSIONS=768
-EMBEDDING_BATCH_SIZE=10
-CHUNK_SIZE=350
-CHUNK_OVERLAP=60
-TOP_K=4
-CHROMA_DB_PATH=./chroma_db
-CHROMA_COLLECTION=kigali_hometech_documents
-HOST=127.0.0.1
-PORT=8000
-CORS_ORIGINS=http://127.0.0.1:5174,http://localhost:5174
-```
-
-Never commit `.env`. The repository's `.gitignore` protects it.
-
-## 3. Install backend dependencies
-
-Use a virtual environment so the packages are isolated from the rest of the computer:
+### 2. Start the application
 
 ```bash
-cd ~/kigali-hometech-rag/rag-based-chatbot
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+docker compose up --build
 ```
 
-## 4. Index the documents
+Open these addresses in a browser:
 
-Run this once after adding or changing documents:
+| Address | Purpose |
+| --- | --- |
+| <http://localhost:5174> | Chatbot web interface |
+| <http://localhost:8000/health> | Backend status check |
+| <http://localhost:8000/docs> | Interactive FastAPI documentation |
+
+`http://localhost:8000/` returning **Not Found** is normal; the backend has no homepage route.
+
+### 3. Build the index
+
+On first use, open the web interface and click **Rebuild document index**. The system will process the documents and store the vectors in the Docker ChromaDB volume.
+
+To stop the application, press `Ctrl + C`. To run it in the background:
 
 ```bash
-python ingest.py
+docker compose up -d
 ```
 
-What happens during indexing:
-
-1. `pypdf` extracts text page by page so page numbers are preserved.
-2. The text is split into approximately 350 word/punctuation units.
-3. Consecutive chunks overlap by 60 units so information at a boundary is not lost.
-4. Every chunk is sent to `gemini-embedding-2` using the document-search format.
-5. Gemini returns 768 numbers for each chunk.
-6. ChromaDB stores the vector, original text, filename, page, and chunk number.
-7. The local database is saved in `rag-based-chatbot/chroma_db/`.
-
-Re-running ingestion safely rebuilds this learning project's collection from the current documents.
-
-## 5. Start the backend
+To remove containers and the saved vector index, then start fresh:
 
 ```bash
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+docker compose down -v
 ```
 
-Useful addresses:
-
-- API status: <http://127.0.0.1:8000/health>
-- Interactive API documentation: <http://127.0.0.1:8000/docs>
-
-The backend endpoints are:
+## API endpoints
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/health` | Check the API plus indexed document and chunk counts |
-| POST | `/ingest` | Rebuild the document index |
-| POST | `/documents/upload` | Upload one PDF and automatically rebuild the index |
-| POST | `/chat` | Ask a question and receive an answer with sources |
+| `GET` | `/health` | Shows backend status, model names, document count, and indexed chunks. |
+| `POST` | `/ingest` | Rebuilds the index from all approved documents. |
+| `POST` | `/documents/upload` | Validates, saves, and indexes one PDF up to 10 MB. |
+| `POST` | `/chat` | Answers a customer question with sources and a transparency trace. |
 
-Example API question:
+Example request:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/chat \
+curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
   -d '{"question":"Can I return a blender after 14 days?"}'
 ```
 
-Example PDF upload:
+## Test the demonstration
 
-```bash
-curl -X POST http://127.0.0.1:8000/documents/upload \
-  -F "file=@/path/to/New_Business_Guide.pdf"
-```
+Use the questions in [TEST_QUESTIONS.md](TEST_QUESTIONS.md). Good presentation examples include:
 
-## 6. Start the frontend
+- “Can I return a blender after 14 days?”
+- “How long does delivery take in Kigali?”
+- “How do I claim a warranty?”
+- “How should I clean the SmartBlend 500?”
+- “Does the store sell laptops?” — this should produce the safe unknown-answer message if no document supports it.
 
-Open a second terminal:
+For each test, confirm that the answer is clear, the source badges match the relevant document pages, and the Transparency panel shows the real backend process.
 
-```bash
-cd ~/kigali-hometech-rag/frontend
-cp .env.example .env
-npm install
-npm run dev
-```
+## Adding documents
 
-Open <http://127.0.0.1:5174>.
+Use either option:
 
-Port `5173` was already occupied on the development computer, so this project uses:
+1. In the interface, select **Add a new PDF**. The backend accepts text-readable PDFs up to 10 MB and rebuilds the index automatically.
+2. Put a `.pdf` or `.txt` file in `rag-based-chatbot/data/`, then rebuild the index from the interface or call `POST /ingest`.
 
-- Backend: `8000`
-- Frontend: `5174`
+Scanned PDFs without extractable text need OCR before upload. Duplicate filenames, empty files, invalid PDFs, and PDFs larger than 10 MB are rejected.
 
-## Add a new PDF from the chatbot
+## Important notes
 
-1. Open the chatbot and find **Knowledge index** in the left sidebar.
-2. Select **Add a new PDF**.
-3. Choose a text-based PDF that is 10 MB or smaller.
-4. Wait while the backend saves the PDF, extracts its pages, chunks all approved documents, creates Gemini embeddings, and rebuilds ChromaDB.
-5. Read the success message in the chat and check the updated file and chunk counts.
-6. Ask questions whose answers are in the new document and confirm that its name and page appear below the answer.
-
-For safety, the upload rejects non-PDF files, empty or unreadable PDFs, scanned PDFs without extractable text, files larger than 10 MB, and duplicate filenames. Uploaded PDFs are saved in `rag-based-chatbot/data/`. The new file remains local until you deliberately commit and push it to GitHub.
-
-The upload uses `python-multipart`, which is installed automatically by `pip install -r requirements.txt`.
-
-## How one question is answered
-
-For the question **“Can I return a blender after 14 days?”**:
-
-1. The backend formats it as a question-answering search query.
-2. Gemini converts it to a 768-dimensional query embedding.
-3. ChromaDB compares that vector with all stored document vectors using cosine distance.
-4. ChromaDB returns candidate chunks; the backend removes duplicate pages and keeps the four best unique pages.
-5. The backend creates a prompt containing numbered evidence blocks with filenames and pages.
-6. The prompt tells Gemini to use only the excerpts and say it does not know when evidence is missing.
-7. Gemini cites evidence numbers so the backend can verify that each citation refers to retrieved evidence.
-8. The answer is shown without inline citations; the API returns verified source metadata for the source badges underneath it.
-
-### Inspect the real RAG process
-
-After the chatbot answers, use the **Transparency** panel on the right. Click any step to inspect the real data produced for that specific question:
-
-- **Question received** — the exact question and character count.
-- **Query embedded** — the Gemini embedding model, 768 dimensions, and a safe preview of the first eight vector values.
-- **Vector search** — the ChromaDB collection, similarity method, indexed-chunk count, and returned-candidate count.
-- **Evidence retrieved** — the selected document pages, similarity scores, and text excerpts sent as evidence.
-- **Prompt augmented** — the grounding instruction and a safe preview showing how the question and evidence were combined.
-- **Answer verified** — the generation model, temperature, final answer, and number of verified citations.
-
-The API returns this information in a `trace` object with each `/chat` response. It does not expose the Gemini API key or the complete private prompt.
-
-## Test questions
-
-The complete categorized checklist is in [TEST_QUESTIONS.md](TEST_QUESTIONS.md). It includes return, warranty, delivery, payment, product-manual, and missing-information tests, plus a table for recording results.
-
-- Can I return a blender after 14 days?
-- What proof do I need for a return?
-- How long does delivery take in Kigali?
-- How do I claim a warranty?
-- Which payment methods are accepted?
-- How should I clean the SmartBlend 500?
-- What should I do before using the CoolHome 200 refrigerator?
-- What is the store's policy about something not covered by the documents?
-
-The final question is useful for checking that the chatbot says it does not know instead of inventing an answer.
-
-## Updating documents
-
-Choose either method:
-
-- **From the interface:** select **Add a new PDF** in the left sidebar. The chatbot validates, saves, and indexes it automatically.
-- **Manually:** put new `.pdf` or `.txt` files inside `rag-based-chatbot/data/`, activate the backend virtual environment, and run `python ingest.py`.
-
-After either method, test representative customer questions, inspect the Transparency panel, and verify that the correct document and page badges appear below the answer. Avoid old or duplicate documents because ingestion rebuilds the collection from every supported file currently in `data/`.
-
-## Security and quality notes
-
-- The Gemini key belongs only in the backend `.env` file.
-- Never place an API key in frontend JavaScript or GitHub.
-- The free Gemini tier is suitable for fictional training data, not confidential business documents.
-- Source citations improve traceability but do not guarantee correctness.
-- Important warranty, payment, or legal decisions should still receive human review.
-- Before production, add authentication, access control, monitoring, rate limiting, automated tests, and a production database strategy.
-
-## Troubleshooting
-
-### `GEMINI_API_KEY is missing`
-
-Add the key to `rag-based-chatbot/.env`, not `frontend/.env`.
-
-### `The document index is empty`
-
-Activate the virtual environment and run `python ingest.py`.
-
-### The frontend says `API offline`
-
-Start FastAPI on port `8000` and confirm <http://127.0.0.1:8000/health> opens.
-
-### The browser reports a CORS error
-
-Confirm the frontend uses port `5174` and both `http://127.0.0.1:5174` and `http://localhost:5174` are allowed in `CORS_ORIGINS`.
-
-### The embedding model changes
-
-Rebuild the Chroma collection by running `python ingest.py`. Embeddings from different models or dimensions must not be mixed.
-
-### PDF upload is unavailable
-
-Activate the backend virtual environment, run `pip install -r requirements.txt`, and restart FastAPI. The upload route requires `python-multipart`.
-
-### A PDF is rejected as unreadable
-
-The learning project accepts text-based PDFs up to 10 MB. If a PDF contains only scanned images, run OCR on it first and then upload the searchable version.
+- Never place `GEMINI_API_KEY` in frontend code or GitHub.
+- The assistant is designed for approved training documents, not confidential production data.
+- Sources make answers traceable, but important business, legal, warranty, or payment decisions should still be reviewed by a person.
+- Before production use, add authentication, access control, rate limiting, monitoring, automated tests, and a production data strategy.
